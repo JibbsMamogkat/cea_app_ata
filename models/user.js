@@ -28,9 +28,9 @@ const userSchema = new Schema({
 
 	role: {
 		type: String,
-		enum: ["Professor", "Program-Chair", "Dean", "HR", "Admin", "Super-Admin", "Practicum-Coordinator", "VPAA", "HRMO" ],
+		enum: ["Instructor", "Professor", "Program-Chair", "Dean", "HR", "Admin", "Super-Admin", "Practicum-Coordinator", "VPAA", "HRMO" ],
 		default: "Professor"
-	},
+	}, // Added instructor role.
 
 	department: {
         type: String,

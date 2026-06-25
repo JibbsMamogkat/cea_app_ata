@@ -196,4 +196,239 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         dotObserver.observe(dot, { attributes: true });
     });
+    // ====================================================================
+    // 3. STRICT VALIDATION, CROPPER, & INTERACTIVE DRAG-AND-DROP ENGINE
+    // ====================================================================
+    const uploadInput = document.getElementById('uploadSignatureInput');
+    const cropperModal = document.getElementById('cropperModal');
+    const imageToCrop = document.getElementById('imageToCrop');
+    const cancelCropBtn = document.getElementById('cancelCropBtn');
+    const confirmCropBtn = document.getElementById('confirmCropBtn');
+    const mainCanvas = document.getElementById('signatureCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    let cropper; 
+
+    // 🕹️ DRAGGABLE STATE VARIABLES
+    let uploadedImg = null;
+    let imgX = 0, imgY = 0;
+    let imgWidth = 0, imgHeight = 0;
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+
+    // Redraws the canvas dynamically while dragging
+    function renderCanvas() {
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        if (uploadedImg) {
+            mainCtx.drawImage(uploadedImg, imgX, imgY, imgWidth, imgHeight);
+        }
+    }
+
+    if (uploadInput) {
+        // ---------------------------------------------------------
+        // 1. FILE UPLOAD & STRICT VALIDATION
+        // ---------------------------------------------------------
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 🛑 STRICT INPUT VALIDATION: Reject anything that isn't an image
+            if (!file.type.startsWith('image/')) {
+                alert("Invalid File Format: Please upload a valid image file (PNG, JPG, JPEG).\nDocuments (like PDFs or Word files) are not allowed.");
+                uploadInput.value = ''; // Instantly clear the invalid file
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                imageToCrop.src = event.target.result;
+                cropperModal.style.display = 'flex';
+
+                if (cropper) cropper.destroy(); 
+                cropper = new Cropper(imageToCrop, {
+                    aspectRatio: NaN, 
+                    viewMode: 1,      
+                    autoCropArea: 0.8 
+                });
+                
+                uploadInput.value = ''; 
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ---------------------------------------------------------
+        // 2. MODAL BUTTONS (CANCEL & CONFIRM)
+        // ---------------------------------------------------------
+        cancelCropBtn.addEventListener('click', () => {
+            cropperModal.style.display = 'none';
+            if (cropper) cropper.destroy();
+        });
+
+        confirmCropBtn.addEventListener('click', () => {
+            if (!cropper) return;
+
+            const croppedCanvas = cropper.getCroppedCanvas({ width: 800 });
+            const ctx = croppedCanvas.getContext('2d');
+            const imgData = ctx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
+            const data = imgData.data;
+
+            // PNG-Safe Soft Filter
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i+3] < 20) { data[i+3] = 0; continue; }
+                const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+                if (brightness > 190) {
+                    data[i+3] = 0; 
+                } else {
+                    const opacity = 255 - ((brightness / 190) * 255);
+                    data[i] = 10; data[i+1] = 10; data[i+2] = 30; data[i+3] = opacity; 
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            // Establish final image dimensions
+            const cssWidth = mainCanvas.offsetWidth || 400;
+            const cssHeight = mainCanvas.offsetHeight || 150;
+            
+            const hRatio = cssWidth / croppedCanvas.width;
+            const vRatio = cssHeight / croppedCanvas.height;
+            const ratio  = Math.min(hRatio, vRatio) * 0.85; 
+
+            imgWidth = croppedCanvas.width * ratio;
+            imgHeight = croppedCanvas.height * ratio;
+            
+            // Start the image perfectly centered
+            imgX = (cssWidth - imgWidth) / 2;
+            imgY = (cssHeight - imgHeight) / 2;  
+
+            // Generate the draggable image object
+            uploadedImg = new Image();
+            uploadedImg.onload = () => {
+                    // 🛑 SHUT OFF THE DRAWING PEN
+                    if (typeof signaturePad !== 'undefined') {
+                        signaturePad.off();
+                    }
+                    
+                    // Draw it to the screen and change cursor
+                    renderCanvas();
+                    mainCanvas.style.cursor = 'grab';
+                    document.getElementById('drawPlaceholder').style.display = 'none';
+                    cropperModal.style.display = 'none';
+                    cropper.destroy();
+
+                    // 🛑 THE FIX: INSTANTLY SYNC TO SIGNATURE PAD!
+                    // This guarantees the PDF gets the image even if the user never touches it.
+                    if (typeof signaturePad !== 'undefined') {
+                        signaturePad.fromDataURL(mainCanvas.toDataURL(), { 
+                            ratio: 1, 
+                            width: mainCanvas.width, 
+                            height: mainCanvas.height 
+                        });
+                    }
+                };
+            uploadedImg.src = croppedCanvas.toDataURL();
+        });
+
+        // ---------------------------------------------------------
+        // 3. INTERACTIVE MOUSE / TOUCH EVENTS FOR DRAGGING
+        // ---------------------------------------------------------
+        const getMousePos = (e) => {
+            const rect = mainCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        };
+
+        const handleStart = (e) => {
+            if (!uploadedImg) return;
+            const pos = getMousePos(e);
+            
+            // Check if user clicked INSIDE the bounding box of the signature
+            if (pos.x >= imgX && pos.x <= imgX + imgWidth && pos.y >= imgY && pos.y <= imgY + imgHeight) {
+                isDragging = true;
+                dragStartX = pos.x - imgX;
+                dragStartY = pos.y - imgY;
+                mainCanvas.style.cursor = 'grabbing'; // Clenched hand cursor
+                e.preventDefault(); 
+            }
+        };
+
+        const handleMove = (e) => {
+            if (!uploadedImg) return;
+            const pos = getMousePos(e);
+
+            if (isDragging) {
+                // Move the image
+                imgX = pos.x - dragStartX;
+                imgY = pos.y - dragStartY;
+                renderCanvas();
+                e.preventDefault();
+            } else {
+                // Hover effect: Open hand if over image, pointer if not
+                if (pos.x >= imgX && pos.x <= imgX + imgWidth && pos.y >= imgY && pos.y <= imgY + imgHeight) {
+                    mainCanvas.style.cursor = 'grab';
+                } else {
+                    mainCanvas.style.cursor = 'default';
+                }
+            }
+        };
+
+        const handleEnd = () => {
+            if (isDragging && typeof signaturePad !== 'undefined') {
+                // SECRET SYNC: Tell SignaturePad where the image landed so the form submission doesn't fail!
+                signaturePad.fromDataURL(mainCanvas.toDataURL(), { ratio: 1, width: mainCanvas.width, height: mainCanvas.height });
+            }
+            isDragging = false;
+            if (uploadedImg) mainCanvas.style.cursor = 'grab';
+        };
+
+        // Bind events for Desktop
+        mainCanvas.addEventListener('mousedown', handleStart);
+        mainCanvas.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        
+        // Bind events for Mobile/Tablets
+        mainCanvas.addEventListener('touchstart', handleStart, {passive: false});
+        mainCanvas.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('touchend', handleEnd);
+
+        // ---------------------------------------------------------
+        // 4. OVERRIDE THE "CLEAR" BUTTON
+        // ---------------------------------------------------------
+        const clearBtn = document.getElementById('clearSignatureBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                uploadedImg = null; // Delete the image from memory
+                document.getElementById('drawPlaceholder').style.display = 'block';
+                mainCanvas.style.cursor = 'crosshair'; // Return to drawing cursor
+                
+                if (typeof signaturePad !== 'undefined') {
+                    signaturePad.on(); // 🟢 TURN THE PEN BACK ON
+                    signaturePad.clear(); // Wipe the canvas
+                } else {
+                    renderCanvas();
+                }
+            });
+        }
+    }
+    // ====================================================================
+    // 5. BULLETPROOF PLACEHOLDER HIDING
+    // ====================================================================
+    const drawPlaceholder = document.getElementById('drawPlaceholder');
+    if (mainCanvas && drawPlaceholder) {
+        // 1. Force our code to run BEFORE SignaturePad swallows the event using { capture: true }
+        mainCanvas.addEventListener('pointerdown', () => {
+            drawPlaceholder.style.display = 'none';
+        }, { capture: true });
+
+        mainCanvas.addEventListener('touchstart', () => {
+            drawPlaceholder.style.display = 'none';
+        }, { capture: true, passive: true });
+        
+        // 2. Just in case, hook directly into SignaturePad's internal engine
+        if (typeof signaturePad !== 'undefined' && typeof signaturePad.addEventListener === 'function') {
+            signaturePad.addEventListener("beginStroke", () => {
+                drawPlaceholder.style.display = 'none';
+            });
+        }
+    }
 });
+
