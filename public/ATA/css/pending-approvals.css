@@ -160,7 +160,7 @@ body, html {
 /* --- Tabs --- */
 .bb-tabs-wrapper {
   display: flex;
-  justify-content: space-between; /* Pushes signature buttons to the right */
+  justify-content: space-between;
   align-items: center;
   padding: 0 40px;
   border-bottom: 1px solid #e0e0e0;
@@ -305,18 +305,52 @@ body, html {
   transition: all 0.2s;
 }
 
-/* --- MODAL CSS --- */
+/* ====================================================================
+   MODAL CSS & VIP VAULT LAYOUT
+   ==================================================================== */
 .modal-overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   background: rgba(0, 0, 0, 0.8); z-index: 1000; justify-content: center; align-items: center;
 }
+
 .signature-modal {
   background: #2b2b2b; padding: 30px; border-radius: 10px; width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.5); color: white; display: flex; flex-direction: column; gap: 15px;
+  transition: all 0.3s ease;
 }
-.signature-preview-box {
-  background: white; border-radius: 5px; height: 100px; display: flex; 
-  justify-content: center; align-items: center; overflow: hidden;
+
+.vip-vault-flex {
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.vip-vault-col {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  /* Expands the modal ONLY when 2 boxes are present side-by-side */
+  .signature-modal.wide-mode {
+      max-width: 900px !important;
+      width: max-content !important;
+      padding-left: 30px !important;
+      padding-right: 30px !important;
+  }
+}
+
+@media (max-width: 899px) {
+  /* Adds a nice divider when the boxes stack vertically on mobile/tablet */
+  .vip-vault-col.mobile-divider {
+      padding-bottom: 20px;
+      border-bottom: 1px dashed #555;
+  }
 }
 
 /* ====================================================================
@@ -324,17 +358,17 @@ body, html {
    ==================================================================== */
 @media (max-width: 1024px) and (min-width: 769px) {
 
-    .bb-page-header, 
-    .bb-tabs-wrapper { 
-        padding: 20px 25px !important; 
-    }
-    
-    .bb-table-container { 
-        padding: 0 25px 40px 25px !important; 
-        overflow-x: auto !important; 
-    }
+  .bb-page-header, 
+  .bb-tabs-wrapper { 
+      padding: 20px 25px !important; 
+  }
+  
+  .bb-table-container { 
+      padding: 0 25px 40px 25px !important; 
+      overflow-x: auto !important; 
+  }
 
-    .search-input { width: 220px; }
+  .search-input { width: 220px; }
 }
 
 /* ====================================================================
@@ -342,83 +376,82 @@ body, html {
    ==================================================================== */
 @media (max-width: 768px) {
 
-    .main-content {
-        margin-left: 0 !important;
-        width: 100vw !important;
-    }
+  .main-content {
+      margin-left: 0 !important;
+      width: 100vw !important;
+  }
 
+  .bb-page-header {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 15px !important;
+      padding: 20px 15px !important;
+  }
 
-    .bb-page-header {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 15px !important;
-        padding: 20px 15px !important;
-    }
+  .search-wrapper, .search-input {
+      width: 100% !important;
+  }
+  .btn-outline {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-content: center !important;
+  }
 
-    .search-wrapper, .search-input {
-        width: 100% !important;
-    }
-    .btn-outline {
-        margin-left: 0 !important;
-        width: 100% !important;
-        justify-content: center !important;
-    }
+  .bb-tabs-wrapper {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      padding: 15px !important;
+      gap: 15px !important;
+  }
+  .signature-actions-bar {
+      width: 100% !important;
+      flex-wrap: wrap !important;
+      justify-content: flex-start !important;
+  }
+  .btn-action {
+      flex: 1 1 auto; 
+      justify-content: center !important;
+  }
 
-    .bb-tabs-wrapper {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 15px !important;
-        gap: 15px !important;
-    }
-    .signature-actions-bar {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-        justify-content: flex-start !important;
-    }
-    .btn-action {
-        flex: 1 1 auto; 
-        justify-content: center !important;
-    }
+  .bb-table-container {
+      padding: 10px 15px 30px 15px !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+  }
 
-    .bb-table-container {
-        padding: 10px 15px 30px 15px !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-    }
+  .signature-modal {
+      width: 95% !important; 
+      padding: 20px 15px !important;
+      max-height: 90vh !important; 
+      overflow-y: auto !important;
+  }
+  
+  #vipSignatureCanvas {
+      width: 100% !important;
+      max-width: 400px !important;
+      height: 150px !important; /* Locks height to protect PDF ratio on mobile */
+      touch-action: none; 
+  }
 
-    .signature-modal {
-        width: 95% !important; 
-        padding: 20px 15px !important;
-        max-height: 90vh !important; 
-        overflow-y: auto !important;
-    }
-    
-    #vipSignatureCanvas {
-        width: 100% !important;
-        max-width: 440px !important;
-        height: auto !important;
-        touch-action: none; 
-    }
+  .signature-modal div[style*="display: flex"] {
+      flex-wrap: wrap !important;
+      width: 100% !important;
+      gap: 10px !important;
+      justify-content: space-between !important;
+      margin-top: 10px !important;
+  }
 
-    .signature-modal div[style*="display: flex"] {
-        flex-wrap: wrap !important;
-        width: 100% !important;
-        gap: 10px !important;
-        justify-content: space-between !important;
-        margin-top: 10px !important;
-    }
+  .signature-modal .btn-action {
+      flex: 1 1 40% !important;
+      justify-content: center !important;
+      padding: 12px 10px !important;
+      font-size: 14px !important;
+      margin: 0 !important;
+  }
 
-    .signature-modal .btn-action {
-        flex: 1 1 40% !important;
-        justify-content: center !important;
-        padding: 12px 10px !important;
-        font-size: 14px !important;
-        margin: 0 !important;
-    }
-
-    #saveVipSigBtn {
-        flex: 1 1 100% !important; 
-        padding: 14px !important;
-        font-size: 16px !important;
-    }
+  #saveVipSigBtn {
+      flex: 1 1 100% !important; 
+      padding: 14px !important;
+      font-size: 16px !important;
+  }
 }
