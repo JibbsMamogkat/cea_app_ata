@@ -18,7 +18,6 @@ const __dirname = path.dirname(__filename);
 // Load .env from ROOT
 // ========================
 dotenv.config({ path: path.resolve(__dirname, ".env") });
-dotenv.config();
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
 const app = express();
@@ -39,7 +38,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         maxAge: 1000 * 60 * 60 * 12,
-        secure: false
+        secure: process.env.NODE_ENV === 'production'
     }
 }));
 
