@@ -21,6 +21,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
 const app = express();
+app.set('trust proxy', true);
 app.get('/ping', (req, res) => {
     console.log("DEBUG: RECEIVED PING");
     res.send('PONG');
